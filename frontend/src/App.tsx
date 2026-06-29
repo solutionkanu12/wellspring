@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { ConnectModal, useCurrentAccount } from '@mysten/dapp-kit'
+import { ConnectModal, useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit'
+import { Transaction } from '@mysten/sui/transactions'
 import type { Proof, Screen } from './data'
 import { INITIAL_PROOFS } from './data'
 import { uploadToWalrus } from './walrus'
+import { PACKAGE_ID, MODULE_NAME, CLOCK_ID, walrusBlobUrl } from './config'
 import { Nav } from './components/Nav'
 import { Connect } from './components/Connect'
 import { Feed } from './components/Feed'
@@ -14,13 +16,38 @@ import { Footer } from './components/Footer'
 
 const IDLE_STEPS: StepState[] = ['idle', 'idle', 'idle']
 
+const formatTs = (ms: number) => new Date(ms).toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
+
+const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v))
+
+// Map raw errors (esp. wallet rejection) to something readable.
+const friendlyError = (e: unknown) => {
+  const msg = e instanceof Error ? e.message : String(e)
+  if (/reject|denied|declined|cancel/i.test(msg)) {
+    return 'You rejected the signature request in your wallet.'
+  }
+  return msg
+}
+
 function App() {
   const account = useCurrentAccount()
   const connected = !!account
+  const suiClient = useSuiClient()
+
+  // Sign-only via the wallet, then execute through the SuiClient so we can ask
+  // for full effects + object changes (dapp-kit's default output omits them).
+  const { mutateAsync: signAndExecuteTx } = useSignAndExecuteTransaction({
+    execute: async ({ bytes, signature }) =>
+      suiClient.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: { showEffects: true, showObjectChanges: true },
+      }),
+  })
 
   const [screen, setScreen] = useState<Screen>('connect')
   const [proofs] = useState<Proof[]>(INITIAL_PROOFS)
-  const [activeProofId, setActiveProofId] = useState<string | null>(null)
+  const [currentProof, setCurrentProof] = useState<Proof | null>(null)
   const [connectOpen, setConnectOpen] = useState(false)
 
   // freeze overlay state
@@ -65,32 +92,114 @@ function App() {
   }
 
   const openProof = (id: string) => {
-    setActiveProofId(id)
-    go('verify')
-  }
-
-  // Phase 3: real Walrus upload. Show the existing frost/seal overlay while the
-  // evidence photo uploads, then surface the returned blobId. The on-chain freeze
-  // transaction + redirect to the verify page are Phase 4 (form is collected but
-  // not yet used here).
-  const handleFreeze = async (_form: FreezeForm, file: File) => {
-    setWalrusResult(null)
-    setFreezing(true)
-    setSteps(['active', 'idle', 'idle']) // "Storing evidence on Walrus"
-    try {
-      const blobId = await uploadToWalrus(file)
-      console.log('Uploaded to Walrus:', blobId)
-      setSteps(['done', 'idle', 'idle'])
-      setWalrusResult({ blobId })
-      // brief beat so the completed first step is visible, then drop the overlay
-      setTimeout(() => setFreezing(false), 600)
-    } catch (e) {
-      setWalrusResult({ error: e instanceof Error ? e.message : String(e) })
-      setFreezing(false)
+    const p = proofs.find((x) => x.id === id)
+    if (p) {
+      setCurrentProof(p)
+      go('verify')
     }
   }
 
-  const activeProof = proofs.find((p) => p.id === activeProofId) ?? null
+  // Phase 4: the full end-to-end freeze. The frost/seal overlay stays up across
+  // the whole flow — Walrus upload -> wallet signature -> on-chain confirm ->
+  // verify page with the REAL object id, blobId and creator.
+  const handleFreeze = async (form: FreezeForm, file: File) => {
+    setWalrusResult(null)
+    setFreezing(true)
+    setSteps(['active', 'idle', 'idle']) // 1. Storing evidence on Walrus
+    try {
+      // 1. Upload the evidence photo to Walrus.
+      const blobId = await uploadToWalrus(file)
+      console.log('Uploaded to Walrus:', blobId)
+      setWalrusResult({ blobId })
+
+      // 2. Build the freeze_proof transaction.
+      if (!PACKAGE_ID) {
+        throw new Error('VITE_PACKAGE_ID is not set — add it to frontend/.env (see .env.example).')
+      }
+      setSteps(['done', 'active', 'idle']) // 2. Sealing object on Sui (wallet signs)
+
+      const tx = new Transaction()
+      tx.moveCall({
+        target: `${PACKAGE_ID}::${MODULE_NAME}::freeze_proof`,
+        arguments: [
+          tx.pure.string(form.title),
+          tx.pure.string(form.desc),
+          tx.pure.string(form.loc),
+          tx.pure.string(blobId),
+          tx.object(CLOCK_ID),
+        ],
+      })
+
+      // 3. Wallet popup: sign, then execute with effects + object changes.
+      const result = await signAndExecuteTx({ transaction: tx })
+
+      if (result.effects?.status?.status !== 'success') {
+        throw new Error(
+          `Transaction failed on-chain: ${result.effects?.status?.error ?? 'unknown error'}`,
+        )
+      }
+
+      setSteps(['done', 'done', 'active']) // 3. Confirming on-chain
+
+      // 4. Find the newly created ImpactProof object.
+      const createdType = `${PACKAGE_ID}::${MODULE_NAME}::ImpactProof`
+      const created = result.objectChanges?.find(
+        (c) => c.type === 'created' && c.objectType === createdType,
+      )
+      if (!created || created.type !== 'created') {
+        throw new Error('Freeze succeeded but the new ImpactProof object was not found in the result.')
+      }
+      const objectId = created.objectId
+
+      // 5. Read the real on-chain fields (best-effort; fall back to form/tx data).
+      let title = form.title || 'Untitled proof'
+      let desc = form.desc
+      let loc = form.loc || 'Unknown'
+      let blob = blobId
+      let creator = account?.address ?? str(created.sender)
+      let ts = formatTs(Date.now())
+      try {
+        const obj = await suiClient.getObject({ id: objectId, options: { showContent: true } })
+        const content = obj.data?.content
+        if (content && content.dataType === 'moveObject') {
+          const f = content.fields as Record<string, unknown>
+          title = str(f.title) || title
+          desc = str(f.description) || desc
+          loc = str(f.location) || loc
+          blob = str(f.blob_id) || blob
+          creator = str(f.creator) || creator
+          if (f.timestamp_ms != null) ts = formatTs(Number(f.timestamp_ms))
+        }
+      } catch {
+        // keep the form/tx fallback values
+      }
+
+      const realProof: Proof = {
+        id: objectId,
+        title,
+        loc,
+        by: creator,
+        ts,
+        obj: objectId,
+        blob,
+        desc,
+        photoUrl: walrusBlobUrl(blob),
+        digest: result.digest,
+      }
+
+      setSteps(['done', 'done', 'done'])
+      setCurrentProof(realProof)
+      // brief beat so the completed steps are visible, then reveal the proof
+      setTimeout(() => {
+        setFreezing(false)
+        go('verify')
+      }, 600)
+    } catch (e) {
+      // On any failure (incl. rejected signature) show the error and DON'T redirect.
+      setWalrusResult({ error: friendlyError(e) })
+      setFreezing(false)
+    }
+  }
 
   return (
     <>
@@ -106,7 +215,7 @@ function App() {
       />
       <Verify
         active={screen === 'verify'}
-        proof={activeProof}
+        proof={currentProof}
         goFeed={() => go('feed')}
         openProfile={() => go('profile')}
       />

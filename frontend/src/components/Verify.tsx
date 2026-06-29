@@ -20,6 +20,9 @@ export function Verify({
     setTimeout(() => setShareLabel('Copy verification link'), 1600)
   }
 
+  // Real proofs carry a Walrus `photoUrl`; mock ledger entries use a bundled image.
+  const photo = proof ? (proof.photoUrl ?? (proof.img ? IMG[proof.img] : '')) : ''
+
   return (
     <section id="verify" className={`screen ${active ? 'active' : ''}`}>
       <div className="verify-wrap">
@@ -29,7 +32,7 @@ export function Verify({
         <div className="verify-grid">
           <div>
             <div className="proof-media">
-              <div>{proof && <img className="proof-photo" src={IMG[proof.img]} alt="" />}</div>
+              <div>{proof && photo && <img className="proof-photo" src={photo} alt="" />}</div>
               <div className="big-seal">
                 <div className="ring">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -69,7 +72,7 @@ export function Verify({
               </div>
               <div className="drow">
                 <span className="dk">Walrus blob</span>
-                <span className="dv link">{proof ? proof.blob.slice(0, 18) + '…' : ''}</span>
+                <span className="dv link">{proof?.blob ?? ''}</span>
               </div>
               <div className="drow">
                 <span className="dk">Frozen by</span>
@@ -85,6 +88,12 @@ export function Verify({
                 <span className="dk">Network</span>
                 <span className="dv">Sui Testnet</span>
               </div>
+              {proof?.digest && (
+                <div className="drow">
+                  <span className="dk">Transaction</span>
+                  <span className="dv link">{proof.digest}</span>
+                </div>
+              )}
             </div>
 
             <div className="tamper">

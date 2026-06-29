@@ -2,10 +2,11 @@ import type { Proof } from '../data'
 import { IMG } from '../data'
 
 export function ProofCard({ proof, onOpen }: { proof: Proof; onOpen: (id: string) => void }) {
+  const photo = proof.photoUrl ?? (proof.img ? IMG[proof.img] : '')
   return (
     <div className="card" onClick={() => onOpen(proof.id)}>
       <div className="card-img">
-        <img className="proof-photo" src={IMG[proof.img]} alt="" />
+        <img className="proof-photo" src={photo} alt="" />
         <div className="seal-tag">
           <span className="s"></span>SEALED
         </div>

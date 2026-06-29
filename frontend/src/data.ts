@@ -21,8 +21,13 @@ export type Proof = {
   ts: string
   obj: string
   blob: string
-  img: ImgKey
   desc: string
+  // Mock ledger entries reference a bundled image via `img`; real frozen proofs
+  // load their photo from Walrus via `photoUrl`.
+  img?: ImgKey
+  photoUrl?: string
+  // Set for real on-chain proofs.
+  digest?: string
 }
 
 // Sample ledger — identical to the prototype's PROOFS array. UI-only mock data;
