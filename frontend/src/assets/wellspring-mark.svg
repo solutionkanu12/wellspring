@@ -1,0 +1,6 @@
+<svg width="160" height="160" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Wellspring mark">
+  <title>Wellspring</title>
+  <path d="M16 3C16 3 8 13 8 20C8 24.4 11.6 28 16 28C20.4 28 24 24.4 24 20C24 13 16 3 16 3Z" fill="#1E6A8C"/>
+  <path d="M16 3C16 3 24 13 24 20C24 24.4 20.4 28 16 28Z" fill="#3F96BC"/>
+  <path d="M11.6 19.6l3.3 3.3 6.1-6.5" fill="none" stroke="#EAF6FB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
