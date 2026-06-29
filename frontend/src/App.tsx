@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { ConnectModal, useCurrentAccount } from '@mysten/dapp-kit'
 import type { Proof, Screen } from './data'
-import { INITIAL_PROOFS, rand, shortAddr } from './data'
+import { INITIAL_PROOFS } from './data'
+import { uploadToWalrus } from './walrus'
 import { Nav } from './components/Nav'
 import { Connect } from './components/Connect'
 import { Feed } from './components/Feed'
-import { Freeze, type FreezeForm } from './components/Freeze'
+import { Freeze, type FreezeForm, type WalrusResult } from './components/Freeze'
 import { FreezeOverlay, type StepState } from './components/FreezeOverlay'
 import { Verify } from './components/Verify'
 import { Profile } from './components/Profile'
@@ -18,13 +19,14 @@ function App() {
   const connected = !!account
 
   const [screen, setScreen] = useState<Screen>('connect')
-  const [proofs, setProofs] = useState<Proof[]>(INITIAL_PROOFS)
+  const [proofs] = useState<Proof[]>(INITIAL_PROOFS)
   const [activeProofId, setActiveProofId] = useState<string | null>(null)
   const [connectOpen, setConnectOpen] = useState(false)
 
   // freeze overlay state
   const [freezing, setFreezing] = useState(false)
   const [steps, setSteps] = useState<StepState[]>(IDLE_STEPS)
+  const [walrusResult, setWalrusResult] = useState<WalrusResult>(null)
 
   const pendingFreezeRef = useRef(false)
   const prevConnected = useRef(false)
@@ -67,45 +69,25 @@ function App() {
     go('verify')
   }
 
-  // UI-only freeze flow: animate the three steps, prepend a new proof, then open
-  // its verify page. The real Walrus + on-chain freeze transaction land in later phases.
-  const startFreeze = (form: FreezeForm) => {
-    const ts = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
+  // Phase 3: real Walrus upload. Show the existing frost/seal overlay while the
+  // evidence photo uploads, then surface the returned blobId. The on-chain freeze
+  // transaction + redirect to the verify page are Phase 4 (form is collected but
+  // not yet used here).
+  const handleFreeze = async (_form: FreezeForm, file: File) => {
+    setWalrusResult(null)
     setFreezing(true)
-    setSteps(IDLE_STEPS)
-
-    let i = 0
-    const run = () => {
-      setSteps((prev) => {
-        const next = [...prev]
-        if (i > 0) next[i - 1] = 'done'
-        if (i < 3) next[i] = 'active'
-        return next
-      })
-      if (i < 3) {
-        i++
-        setTimeout(run, 900)
-      } else {
-        const np: Proof = {
-          id: 'new' + Date.now(),
-          title: form.title || 'Untitled proof',
-          loc: form.loc || 'Unknown',
-          by: account ? shortAddr(account.address) : '0x7a3f…e91c',
-          ts,
-          obj: '0x' + rand(6) + '…' + rand(4),
-          blob: rand(32),
-          img: 'kids',
-          desc: form.desc || '',
-        }
-        setProofs((prev) => [np, ...prev])
-        setActiveProofId(np.id)
-        setTimeout(() => {
-          setFreezing(false)
-          go('verify')
-        }, 500)
-      }
+    setSteps(['active', 'idle', 'idle']) // "Storing evidence on Walrus"
+    try {
+      const blobId = await uploadToWalrus(file)
+      console.log('Uploaded to Walrus:', blobId)
+      setSteps(['done', 'idle', 'idle'])
+      setWalrusResult({ blobId })
+      // brief beat so the completed first step is visible, then drop the overlay
+      setTimeout(() => setFreezing(false), 600)
+    } catch (e) {
+      setWalrusResult({ error: e instanceof Error ? e.message : String(e) })
+      setFreezing(false)
     }
-    run()
   }
 
   const activeProof = proofs.find((p) => p.id === activeProofId) ?? null
@@ -116,7 +98,12 @@ function App() {
 
       <Connect active={screen === 'connect'} goFeed={() => go('feed')} openConnect={openConnect} />
       <Feed active={screen === 'feed'} proofs={proofs} onOpen={openProof} tryFreeze={tryFreeze} />
-      <Freeze active={screen === 'freeze'} goFeed={() => go('feed')} onFreeze={startFreeze} />
+      <Freeze
+        active={screen === 'freeze'}
+        goFeed={() => go('feed')}
+        onFreeze={handleFreeze}
+        result={walrusResult}
+      />
       <Verify
         active={screen === 'verify'}
         proof={activeProof}

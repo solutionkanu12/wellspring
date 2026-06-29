@@ -1,31 +1,60 @@
-import { useState } from 'react'
-import { IMG } from '../data'
+import { useRef, useState } from 'react'
 
 export type FreezeForm = { title: string; desc: string; loc: string }
 
-// UI-only freeze form. Photo upload and GPS are mocks, exactly as the prototype;
-// real Walrus storage + the freeze transaction arrive in later phases.
+// Result of the Walrus upload, surfaced from App (Phase 3).
+export type WalrusResult = { blobId: string } | { error: string } | null
+
+// Freeze form. Phase 3: the evidence photo is a REAL file picker and, on submit,
+// the file is uploaded to Walrus (orchestrated by App). The freeze transaction
+// itself is still Phase 4 — GPS remains a mock.
 export function Freeze({
   active,
   goFeed,
   onFreeze,
+  result,
 }: {
   active: boolean
   goFeed: () => void
-  onFreeze: (form: FreezeForm) => void
+  onFreeze: (form: FreezeForm, file: File) => void
+  result: WalrusResult
 }) {
   const [title, setTitle] = useState('Hand pump installed — Otukpo, Benue')
   const [desc, setDesc] = useState(
     'Clean-water hand pump installed and tested for a community of roughly 400 people. Replaces a 3km daily walk to the nearest river.',
   )
   const [loc, setLoc] = useState('Otukpo, Benue State, Nigeria')
-  const [photoAdded, setPhotoAdded] = useState(false)
   const [gpsLabel, setGpsLabel] = useState('Use GPS')
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [file, setFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
 
   const mockGPS = () => {
     setLoc('7.1908° N, 8.1338° E (Otukpo, Benue)')
     setGpsLabel('Located')
   }
+
+  const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setFile(f)
+    setPreviewUrl(URL.createObjectURL(f))
+    setFileError(null)
+  }
+
+  const submit = () => {
+    if (!file) {
+      setFileError('Please select an evidence photo before freezing.')
+      return
+    }
+    onFreeze({ title, desc, loc }, file)
+  }
+
+  const prettySize = (bytes: number) =>
+    bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(2)} MB`
 
   return (
     <section id="freeze" className={`screen ${active ? 'active' : ''}`}>
@@ -42,9 +71,16 @@ export function Freeze({
             <label>
               Evidence photo <span className="hint">— stored on Walrus</span>
             </label>
-            {photoAdded ? (
-              <div className="drop has-img" onClick={() => setPhotoAdded(true)}>
-                <img className="proof-photo" src={IMG.child} alt="" />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={onPickFile}
+            />
+            {file && previewUrl ? (
+              <div className="drop has-img" onClick={() => fileInputRef.current?.click()}>
+                <img className="proof-photo" src={previewUrl} alt="" />
                 <div
                   style={{
                     padding: '8px 12px',
@@ -54,11 +90,11 @@ export function Freeze({
                     textAlign: 'left',
                   }}
                 >
-                  photo_otukpo_benue.jpg · ready to store
+                  {file.name} · {prettySize(file.size)} · ready to store
                 </div>
               </div>
             ) : (
-              <div className="drop" onClick={() => setPhotoAdded(true)}>
+              <div className="drop" onClick={() => fileInputRef.current?.click()}>
                 <svg className="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
                   <path d="M4 16l4.5-5 3.5 4 3-3.5L20 16" />
                   <rect x="3" y="4" width="18" height="16" rx="2" />
@@ -67,6 +103,9 @@ export function Freeze({
                 <b>Drop a photo or tap to add</b>
                 <span>JPG or PNG · max 10MB</span>
               </div>
+            )}
+            {fileError && (
+              <div style={{ color: '#c0453b', fontSize: 12.5, marginTop: 8 }}>{fileError}</div>
             )}
           </div>
           <div className="field">
@@ -111,17 +150,42 @@ export function Freeze({
             </div>
           </div>
           <div className="submit-row">
-            <button
-              className="btn btn-primary"
-              style={{ flex: 1 }}
-              onClick={() => onFreeze({ title, desc, loc })}
-            >
+            <button className="btn btn-primary" style={{ flex: 1 }} onClick={submit}>
               Freeze Proof
             </button>
             <button className="btn btn-ghost" onClick={goFeed}>
               Cancel
             </button>
           </div>
+
+          {/* Temporary Phase-3 status: show the Walrus blobId (or an error). */}
+          {result && 'blobId' in result && (
+            <div
+              className="auto-row"
+              style={{ marginTop: 16, wordBreak: 'break-all', alignItems: 'flex-start' }}
+            >
+              <svg className="lk" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+              <span>
+                Uploaded to Walrus: <b>{result.blobId}</b>
+              </span>
+            </div>
+          )}
+          {result && 'error' in result && (
+            <div
+              className="auto-row"
+              style={{
+                marginTop: 16,
+                color: '#c0453b',
+                background: '#fbecea',
+                borderColor: '#e8c4c0',
+                alignItems: 'flex-start',
+              }}
+            >
+              <span>{result.error}</span>
+            </div>
+          )}
         </div>
       </div>
     </section>
