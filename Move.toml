@@ -1,0 +1,8 @@
+[package]
+name = "wellspring"
+edition = "2024.beta"
+# Sui, MoveStdlib and other system dependencies are added automatically by the
+# Sui CLI and resolved against the active environment (testnet) at publish time.
+
+[addresses]
+wellspring = "0x0"
