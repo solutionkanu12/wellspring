@@ -58,6 +58,8 @@ function App() {
   const [freezing, setFreezing] = useState(false)
   const [steps, setSteps] = useState<StepState[]>(IDLE_STEPS)
   const [walrusResult, setWalrusResult] = useState<WalrusResult>(null)
+  // Bumped after a successful freeze to remount (and fully reset) the Freeze form.
+  const [freezeKey, setFreezeKey] = useState(0)
 
   const pendingFreezeRef = useRef(false)
   const prevConnected = useRef(false)
@@ -158,6 +160,10 @@ function App() {
       setTimeout(() => {
         setFreezing(false)
         go('verify')
+        // Reset the freeze form for the next proof: clear the Walrus message and
+        // remount the form (clears photo, title, description, location).
+        setWalrusResult(null)
+        setFreezeKey((k) => k + 1)
       }, 600)
     } catch (e) {
       // On any failure (incl. rejected signature) show the error and DON'T redirect.
@@ -180,6 +186,7 @@ function App() {
         tryFreeze={tryFreeze}
       />
       <Freeze
+        key={freezeKey}
         active={screen === 'freeze'}
         goFeed={() => go('feed')}
         onFreeze={handleFreeze}

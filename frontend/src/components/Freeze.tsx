@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export type FreezeForm = { title: string; desc: string; loc: string }
 
@@ -19,17 +19,22 @@ export function Freeze({
   onFreeze: (form: FreezeForm, file: File) => void
   result: WalrusResult
 }) {
-  const [title, setTitle] = useState('Hand pump installed — Otukpo, Benue')
-  const [desc, setDesc] = useState(
-    'Clean-water hand pump installed and tested for a community of roughly 400 people. Replaces a 3km daily walk to the nearest river.',
-  )
-  const [loc, setLoc] = useState('Otukpo, Benue State, Nigeria')
+  const [title, setTitle] = useState('')
+  const [desc, setDesc] = useState('')
+  const [loc, setLoc] = useState('')
   const [gpsLabel, setGpsLabel] = useState('Use GPS')
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
+
+  // Revoke the preview object URL when it changes or the form unmounts (the form
+  // is remounted via `key` after a successful freeze to reset everything).
+  useEffect(() => {
+    if (!previewUrl) return
+    return () => URL.revokeObjectURL(previewUrl)
+  }, [previewUrl])
 
   const mockGPS = () => {
     setLoc('7.1908° N, 8.1338° E (Otukpo, Benue)')
@@ -39,7 +44,6 @@ export function Freeze({
   const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
     setFile(f)
     setPreviewUrl(URL.createObjectURL(f))
     setFileError(null)
