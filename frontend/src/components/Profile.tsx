@@ -5,11 +5,13 @@ import avatarImg from '../assets/avatar-water.jpg'
 export function Profile({
   active,
   proofs,
+  loading,
   goFeed,
   onOpen,
 }: {
   active: boolean
   proofs: Proof[]
+  loading: boolean
   goFeed: () => void
   onOpen: (id: string) => void
 }) {
@@ -54,11 +56,17 @@ export function Profile({
           </div>
         </div>
         <div className="section-label">Frozen proofs · this org's verifiable history</div>
-        <div className="grid">
-          {proofs.map((p) => (
-            <ProofCard key={p.id} proof={p} onOpen={onOpen} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="ledger-state">Loading proofs from chain…</div>
+        ) : proofs.length === 0 ? (
+          <div className="ledger-state">No proofs frozen yet.</div>
+        ) : (
+          <div className="grid">
+            {proofs.map((p) => (
+              <ProofCard key={p.id} proof={p} onOpen={onOpen} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )

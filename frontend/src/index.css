@@ -392,3 +392,9 @@
   .proof-media .proof-photo{height:auto;max-height:430px}
   .drop.has-img .proof-photo{height:188px}
   .proof-seal{position:absolute;top:14px;right:14px;width:74px;height:auto;transform:rotate(8deg);filter:drop-shadow(0 7px 12px rgba(0,0,0,.35));z-index:3;pointer-events:none}
+
+  /* ---------- chain load/empty/error states ---------- */
+  .ledger-state{padding:46px 24px;text-align:center;color:var(--muted);font-size:14.5px;
+    background:var(--surface);border:1px solid var(--frost);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .ledger-error{color:#c0453b;background:#fbecea;border-color:#e8c4c0}
+  .grid + .ledger-state,.ledger-state{margin-bottom:70px}

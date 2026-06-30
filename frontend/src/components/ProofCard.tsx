@@ -1,5 +1,5 @@
 import type { Proof } from '../data'
-import { IMG } from '../data'
+import { IMG, shortAddr } from '../data'
 
 export function ProofCard({ proof, onOpen }: { proof: Proof; onOpen: (id: string) => void }) {
   const photo = proof.photoUrl ?? (proof.img ? IMG[proof.img] : '')
@@ -21,7 +21,7 @@ export function ProofCard({ proof, onOpen }: { proof: Proof; onOpen: (id: string
           {proof.loc}
         </div>
         <div className="card-foot">
-          <span className="addr">{proof.by}</span>
+          <span className="addr">{shortAddr(proof.by)}</span>
           <span className="stamp">{proof.ts.split(' ')[0]}</span>
         </div>
       </div>
