@@ -4,10 +4,12 @@ export function Footer({
   goConnect,
   goFeed,
   tryFreeze,
+  goLitepaper,
 }: {
   goConnect: () => void
   goFeed: () => void
   tryFreeze: () => void
+  goLitepaper: () => void
 }) {
   return (
     <footer className="site-foot">
@@ -42,7 +44,7 @@ export function Footer({
           </div>
           <div className="fcol">
             <h4>Resources</h4>
-            <a href="#" rel="noopener">Litepaper</a>
+            <a onClick={goLitepaper}>Litepaper</a>
             <a href="#" rel="noopener">Docs</a>
             <a href="https://github.com/solutionkanu12/wellspring" target="_blank" rel="noopener">GitHub</a>
           </div>

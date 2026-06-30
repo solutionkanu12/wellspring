@@ -12,6 +12,7 @@ import { Freeze, type FreezeForm, type WalrusResult } from './components/Freeze'
 import { FreezeOverlay, type StepState } from './components/FreezeOverlay'
 import { Verify } from './components/Verify'
 import { Profile } from './components/Profile'
+import { Litepaper } from './components/Litepaper'
 import { Footer } from './components/Footer'
 
 const IDLE_STEPS: StepState[] = ['idle', 'idle', 'idle']
@@ -205,10 +206,16 @@ function App() {
         goFeed={() => go('feed')}
         onOpen={openProof}
       />
+      <Litepaper active={screen === 'litepaper'} goFeed={() => go('feed')} />
 
       {/* Footer appears on the landing page only — not on the Ledger or proof pages. */}
       {screen === 'connect' && (
-        <Footer goConnect={() => go('connect')} goFeed={() => go('feed')} tryFreeze={tryFreeze} />
+        <Footer
+          goConnect={() => go('connect')}
+          goFeed={() => go('feed')}
+          tryFreeze={tryFreeze}
+          goLitepaper={() => go('litepaper')}
+        />
       )}
 
       <FreezeOverlay show={freezing} steps={steps} />

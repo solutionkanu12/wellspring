@@ -11,7 +11,7 @@ export const IMG = {
 
 export type ImgKey = keyof typeof IMG
 
-export type Screen = 'connect' | 'feed' | 'freeze' | 'verify' | 'profile'
+export type Screen = 'connect' | 'feed' | 'freeze' | 'verify' | 'profile' | 'litepaper'
 
 export type Proof = {
   id: string

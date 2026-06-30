@@ -399,6 +399,29 @@
   .ledger-error{color:#c0453b;background:#fbecea;border-color:#e8c4c0}
   .grid + .ledger-state,.ledger-state{margin-bottom:70px}
 
+  /* ---------- litepaper (long-form reading) ---------- */
+  .litepaper{max-width:760px;margin:30px auto 96px;padding:0 26px}
+  .litepaper .back-link{margin-bottom:26px}
+  .lp-head{padding-bottom:30px;border-bottom:1px solid var(--frost)}
+  .lp-eyebrow{font-family:'Space Mono';font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ice);margin-bottom:14px}
+  .litepaper h1{font-size:clamp(34px,6vw,52px);font-weight:800;letter-spacing:-.03em;line-height:1}
+  .lp-tagline{color:var(--muted);font-size:16.5px;line-height:1.55;margin-top:16px}
+  .lp-section{margin-top:42px}
+  .litepaper h2{font-size:22px;font-weight:700;color:var(--ink);letter-spacing:-.01em;margin-bottom:15px;display:flex;align-items:center;gap:12px}
+  .lp-num{font-family:'Space Mono';font-size:12.5px;font-weight:700;color:var(--ice);background:var(--surface);border:1px solid var(--frost);border-radius:8px;padding:4px 8px;flex:none}
+  .litepaper p{font-size:15.5px;line-height:1.8;color:#2c4651;margin-bottom:15px}
+  .litepaper p:last-child{margin-bottom:0}
+  .lp-list{list-style:none;margin:4px 0 16px;padding:0}
+  .lp-list li{position:relative;padding-left:22px;font-size:15.5px;line-height:1.7;color:#2c4651;margin-bottom:12px}
+  .lp-list li:last-child{margin-bottom:0}
+  .lp-list li::before{content:"";position:absolute;left:0;top:.62em;width:8px;height:8px;border-radius:2px;background:var(--ice);transform:rotate(45deg)}
+  .lp-list li b{color:var(--ink);font-weight:600}
+  .litepaper .mono{font-family:'Space Mono';font-size:.9em;color:var(--ice-deep);background:#eef6f9;border:1px solid var(--frost);padding:1px 6px;border-radius:6px;word-break:break-word}
+  .lp-closing{font-family:'Bricolage Grotesque';font-weight:700;font-size:17px;color:var(--ice-deep)}
+  .lp-foot{margin-top:50px;padding-top:22px;border-top:1px solid var(--frost);font-family:'Space Mono';font-size:12.5px;color:var(--muted);line-height:1.7}
+  .lp-foot a{color:var(--ice);text-decoration:none}
+  .lp-foot a:hover{text-decoration:underline}
+
   /* ======================================================================
      Mobile responsiveness (additive — desktop layout is unchanged).
      The ported grid/verify-grid/stat-row already collapse at 720/780/640px.
@@ -410,6 +433,7 @@
     .form-wrap{padding:0 16px}
     .verify-wrap{padding:0 16px}
     .trust-row{padding:0 16px}
+    .litepaper{padding:0 18px}
   }
 
   /* Phone layout (~375–560px). */
