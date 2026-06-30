@@ -21,7 +21,7 @@ export function Footer({
           </div>
           <p>Proof that good things happened. Frozen forever. A verifiable impact protocol on Sui.</p>
           <div className="foot-social">
-            <a href="https://x.com/lofitheyeti" target="_blank" rel="noopener" aria-label="X">
+            <a href="https://x.com/solution_o1" target="_blank" rel="noopener noreferrer" aria-label="X">
               <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.9 2H22l-7.6 8.7L23.3 22h-7l-5.5-7.2L4.5 22H1.4l8.1-9.3L1 2h7.2l5 6.6L18.9 2Zm-1.2 18h1.7L7.4 3.8H5.6L17.7 20Z" />
               </svg>
@@ -54,9 +54,10 @@ export function Footer({
           </div>
           <div className="fcol">
             <h4>Project</h4>
-            <a href="#" rel="noopener">About</a>
-            <a href="#" rel="noopener">Privacy Policy</a>
-            <a href="#" rel="noopener">Terms of Service</a>
+            {/* Inert placeholders — not yet live, intentionally non-clickable. */}
+            <a onClick={(e) => e.preventDefault()} style={{ cursor: 'default' }}>About</a>
+            <a onClick={(e) => e.preventDefault()} style={{ cursor: 'default' }}>Privacy Policy</a>
+            <a onClick={(e) => e.preventDefault()} style={{ cursor: 'default' }}>Terms of Service</a>
           </div>
         </div>
       </div>
